@@ -1,6 +1,6 @@
 # Integration Guide
 
-This guide shows how to integrate the homelab-infrastructure repository with your other projects.
+This guide shows how to integrate the homelab-infrastructure repository with your other projects, using the Three Wise Men (Magi) naming scheme.
 
 ## Quick Integration
 
@@ -18,7 +18,7 @@ In your project's `.env` file:
 ```bash
 # Infrastructure paths
 HOMELAB_INFRA_PATH=../homelab-infrastructure
-MACHINE_ID=machine1-i9-3090  # or machine2-i9-a5000, machine3-5950x-a4000
+MACHINE_ID=melchior-cad  # or balthazar-ai, caspar-code
 
 # Load machine-specific configs
 MACHINE_CONFIG_PATH=${HOMELAB_INFRA_PATH}/machines/${MACHINE_ID}
@@ -36,7 +36,7 @@ services:
   my-service:
     extends:
       file: ${MACHINE_CONFIG_PATH}/docker/compose-overrides.yml
-      service: gpu-compute  # or cpu-intensive, memory-intensive, etc.
+      service: melchior-cad-compute  # or balthazar-ai-inference, caspar-data-processing
     image: myapp:latest
     # ... rest of your config
 ```
@@ -64,7 +64,7 @@ services:
 import json
 import os
 
-machine_id = os.environ.get('MACHINE_ID', 'machine1-i9-3090')
+machine_id = os.environ.get('MACHINE_ID', 'melchior-cad')
 config_path = f"../homelab-infrastructure/machines/{machine_id}/hardware"
 
 # Load GPU info
@@ -84,6 +84,10 @@ networks:
   default:
     external:
       name: homelab_10gbe  # Defined in infrastructure repo
+  
+  magi-network:
+    external:
+      name: magi-network  # Overlay network for all three machines
 ```
 
 ## Project Examples
@@ -95,39 +99,48 @@ networks:
 version: '3.8'
 
 x-machine-profiles:
-  development: &development
-    file: ${HOMELAB_INFRA_PATH}/machines/machine1-i9-3090/docker/compose-overrides.yml
+  # Melchior - CAD/3D Processing
+  melchior: &melchior
+    file: ${HOMELAB_INFRA_PATH}/machines/melchior-cad/docker/compose-overrides.yml
   
-  production: &production
-    file: ${HOMELAB_INFRA_PATH}/machines/machine2-i9-a5000/docker/compose-overrides.yml
+  # Balthazar - AI Model Host
+  balthazar: &balthazar
+    file: ${HOMELAB_INFRA_PATH}/machines/balthazar-ai/docker/compose-overrides.yml
   
-  compute: &compute
-    file: ${HOMELAB_INFRA_PATH}/machines/machine3-5950x-a4000/docker/compose-overrides.yml
+  # Caspar - Code/Data Processing
+  caspar: &caspar
+    file: ${HOMELAB_INFRA_PATH}/machines/caspar-code/docker/compose-overrides.yml
 
 services:
   n8n:
     extends:
-      <<: *${DEPLOYMENT_PROFILE:-development}
+      <<: *${DEPLOYMENT_PROFILE:-melchior}
       service: base
     # ... rest of n8n config
 
   ai-model:
     extends:
-      <<: *${DEPLOYMENT_PROFILE:-production}
-      service: gpu-compute
+      <<: *balthazar
+      service: balthazar-ai-inference
     # ... AI model config
+  
+  data-processor:
+    extends:
+      <<: *caspar
+      service: caspar-data-processing
+    # ... data processing config
 ```
 
 ### CI/CD Integration
 
 ```yaml
 # .github/workflows/deploy.yml
-name: Deploy to Homelab
+name: Deploy to Homelab Magi Systems
 
 env:
-  MACHINE_1_HOST: 192.168.1.100  # From infrastructure repo
-  MACHINE_2_HOST: 192.168.1.101
-  MACHINE_3_HOST: 192.168.1.102
+  MELCHIOR_HOST: 192.168.1.100  # CAD/3D workstation
+  BALTHAZAR_HOST: 192.168.1.101  # AI host
+  CASPAR_HOST: 192.168.1.102  # Code/Data processor
 
 jobs:
   deploy:
@@ -141,9 +154,9 @@ jobs:
           repository: SamuraiBuddha/homelab-infrastructure
           path: infrastructure
       
-      - name: Deploy to Production
+      - name: Deploy to Balthazar (AI Production)
         env:
-          MACHINE_ID: machine2-i9-a5000
+          MACHINE_ID: balthazar-ai
         run: |
           # Use machine-specific configs
           source infrastructure/machines/$MACHINE_ID/deploy-config.sh
@@ -153,24 +166,61 @@ jobs:
 ### Monitoring Integration
 
 ```yaml
-# Prometheus config using infrastructure data
+# Prometheus config using Magi infrastructure data
 global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'machine1'
+  - job_name: 'melchior'
     static_configs:
       - targets: ['192.168.1.100:9100']
         labels:
-          machine: 'machine1-i9-3090'
+          machine: 'melchior-cad'
           gpu: 'rtx3090'
+          role: 'cad_processing'
+          gift: 'gold'
           
-  - job_name: 'machine2'
+  - job_name: 'balthazar'
     static_configs:
       - targets: ['192.168.1.101:9100']
         labels:
-          machine: 'machine2-i9-a5000'
+          machine: 'balthazar-ai'
           gpu: 'rtx-a5000'
+          role: 'ai_inference'
+          gift: 'frankincense'
+          
+  - job_name: 'caspar'
+    static_configs:
+      - targets: ['192.168.1.102:9100']
+        labels:
+          machine: 'caspar-code'
+          gpu: 'rtx-a4000'
+          role: 'data_processing'
+          gift: 'myrrh'
+```
+
+### MCP Services Integration
+
+Since the Terramaster NAS hosts all MCP services:
+
+```yaml
+# MCP client configuration
+mcp_services:
+  postgres:
+    host: terramaster.local
+    port: 5432
+  
+  redis:
+    host: terramaster.local
+    port: 6379
+  
+  neo4j:
+    host: terramaster.local
+    port: 7687
+  
+  influxdb:
+    host: terramaster.local
+    port: 8086
 ```
 
 ## Best Practices
@@ -179,6 +229,13 @@ scrape_configs:
 2. **Use relative paths** - Makes projects portable between machines
 3. **Document dependencies** - Note which infrastructure components are required
 4. **Version compatibility** - Tag infrastructure versions for stability
+5. **Respect the Magi roles** - Deploy workloads to the appropriate machine based on their gifts
+
+## The Three Gifts in Practice
+
+- **Melchior (Gold)**: Deploy CAD, 3D, and precision workloads
+- **Balthazar (Frankincense)**: Deploy AI models, inference, and transformation workloads  
+- **Caspar (Myrrh)**: Deploy code generation, data processing, and preservation workloads
 
 ## Troubleshooting
 
@@ -203,6 +260,14 @@ sudo chown -R $USER:$USER ${HOMELAB_INFRA_PATH}
 ### Network Issues
 
 ```bash
-# Test 10GbE connectivity
-iperf3 -c <other-machine-ip> -p 5201
+# Test 10GbE connectivity between Magi machines
+iperf3 -c <other-magi-ip> -p 5201
+```
+
+### MCP Connection Issues
+
+```bash
+# Test connection to Terramaster MCP services
+curl http://terramaster.local:8086/health  # InfluxDB
+redis-cli -h terramaster.local ping  # Redis
 ```

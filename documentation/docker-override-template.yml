@@ -1,0 +1,78 @@
+# Docker Machine Configuration Template
+# Copy this to machines/[machine-name]/docker/compose-overrides.yml
+# and customize for each machine
+
+# Example: Machine-specific resource limits and GPU access
+
+services:
+  # Base service configuration that other services can extend
+  base:
+    deploy:
+      resources:
+        limits:
+          cpus: '8'  # Adjust based on machine
+          memory: 32G
+        reservations:
+          cpus: '4'
+          memory: 16G
+
+  # GPU-enabled services (RTX 3090 example)
+  gpu-compute:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - CUDA_VISIBLE_DEVICES=0
+
+  # Professional GPU services (RTX A5000 example)
+  cad-compute:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_REQUIRE_CUDA=cuda>=11.0
+
+  # High memory services (128GB machines)
+  memory-intensive:
+    deploy:
+      resources:
+        limits:
+          memory: 96G
+        reservations:
+          memory: 64G
+
+  # CPU intensive services (Ryzen 5950X example)
+  cpu-intensive:
+    deploy:
+      resources:
+        limits:
+          cpus: '32'  # 16 cores, 32 threads
+        reservations:
+          cpus: '16'
+
+# Network configuration
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000  # Jumbo frames for 10GbE
+
+# Volume configuration with NAS paths
+volumes:
+  shared-data:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: username=${NAS_USER},password=${NAS_PASS},uid=1000,gid=1000,vers=3.0
+      device: //terramaster.local/shared

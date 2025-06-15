@@ -1,0 +1,78 @@
+# Homelab Infrastructure .gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Sensitive configuration
+**/secrets/
+**/credentials/
+**/private/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Log files
+*.log
+logs/
+**/logs/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker override files (may contain local paths)
+docker-compose.override.yml
+**/docker-compose.override.yml
+
+# Benchmark results with timestamps (keep only latest)
+**/benchmarks/archive/
+
+# Personal notes
+personal-notes.md
+**/personal/
+
+# Large binary files
+*.iso
+*.img
+*.vmdk
+*.qcow2
+
+# Keep directory structure but not contents
+machines/*/hardware/*
+!machines/*/hardware/.gitkeep
+machines/*/bios/profiles/*
+!machines/*/bios/profiles/.gitkeep
+machines/*/benchmarks/results/*
+!machines/*/benchmarks/results/.gitkeep

@@ -1,8 +1,8 @@
-# Docker Machine Configuration Template
-# Copy this to machines/[machine-name]/docker/compose-overrides.yml
-# and customize for each machine
+# Docker Machine Configuration Template - Magi Systems
+# Copy this to machines/[magi-name]/docker/compose-overrides.yml
+# and customize for each of the Three Wise Men machines
 
-# Example: Machine-specific resource limits and GPU access
+# Example configurations for each Magi system
 
 services:
   # Base service configuration that other services can extend
@@ -16,10 +16,13 @@ services:
           cpus: '4'
           memory: 16G
 
-  # GPU-enabled services (RTX 3090 example)
-  gpu-compute:
+  # Melchior (Gold) - CAD/3D Processing - RTX 3090
+  melchior-cad-compute:
     deploy:
       resources:
+        limits:
+          cpus: '8'  # i9-11900K
+          memory: 56G  # Leave 8GB for system
         reservations:
           devices:
             - driver: nvidia
@@ -28,11 +31,15 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=0
       - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_DRIVER_CAPABILITIES=graphics,compute,utility
 
-  # Professional GPU services (RTX A5000 example)
-  cad-compute:
+  # Balthazar (Frankincense) - AI Model Host - RTX A5000
+  balthazar-ai-inference:
     deploy:
       resources:
+        limits:
+          cpus: '8'  # i9-11900K
+          memory: 112G  # Leave 16GB for system
         reservations:
           devices:
             - driver: nvidia
@@ -42,8 +49,28 @@ services:
       - NVIDIA_VISIBLE_DEVICES=0
       - NVIDIA_DRIVER_CAPABILITIES=all
       - NVIDIA_REQUIRE_CUDA=cuda>=11.0
+      - TF_FORCE_GPU_ALLOW_GROWTH=true
+    shm_size: '16gb'  # For AI workloads
 
-  # High memory services (128GB machines)
+  # Caspar (Myrrh) - Code/Data Processing - RTX A4000
+  caspar-data-processing:
+    deploy:
+      resources:
+        limits:
+          cpus: '32'  # Ryzen 5950X - 16 cores, 32 threads
+          memory: 112G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+          cpus: '16'
+          memory: 64G
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - OMP_NUM_THREADS=32
+
+  # High memory services (for Balthazar and Caspar with 128GB)
   memory-intensive:
     deploy:
       resources:
@@ -52,7 +79,7 @@ services:
         reservations:
           memory: 64G
 
-  # CPU intensive services (Ryzen 5950X example)
+  # CPU intensive services (especially for Caspar's Ryzen 5950X)
   cpu-intensive:
     deploy:
       resources:
@@ -61,18 +88,55 @@ services:
         reservations:
           cpus: '16'
 
-# Network configuration
+# Network configuration with 10GbE optimization
 networks:
   default:
     driver: bridge
     driver_opts:
       com.docker.network.driver.mtu: 9000  # Jumbo frames for 10GbE
+  
+  magi-network:
+    driver: overlay
+    attachable: true
+    driver_opts:
+      com.docker.network.driver.mtu: 9000
 
-# Volume configuration with NAS paths
+# Volume configuration with Terramaster NAS paths
 volumes:
+  # Shared data across all Magi machines
   shared-data:
     driver: local
     driver_opts:
       type: cifs
       o: username=${NAS_USER},password=${NAS_PASS},uid=1000,gid=1000,vers=3.0
       device: //terramaster.local/shared
+  
+  # MCP services data (hosted on Terramaster)
+  mcp-data:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: username=${NAS_USER},password=${NAS_PASS},uid=1000,gid=1000,vers=3.0
+      device: //terramaster.local/mcp-services
+  
+  # Machine-specific volumes
+  melchior-projects:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: username=${NAS_USER},password=${NAS_PASS},uid=1000,gid=1000,vers=3.0
+      device: //terramaster.local/melchior-cad
+  
+  balthazar-models:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: username=${NAS_USER},password=${NAS_PASS},uid=1000,gid=1000,vers=3.0
+      device: //terramaster.local/balthazar-ai
+  
+  caspar-repos:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: username=${NAS_USER},password=${NAS_PASS},uid=1000,gid=1000,vers=3.0
+      device: //terramaster.local/caspar-code
